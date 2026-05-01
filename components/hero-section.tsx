@@ -42,7 +42,7 @@ export function HeroSection() {
                   direction: 'rtl'
                 }}
               >
-                <span>ابدأ الآن مجاناً</span>
+                <span>إبدأ الأن مجاناً، الكتابة بالأحرف العربية فقط !</span>
                 <ArrowRight className="w-4 h-4 rotate-180" />
               </button>
             </form>
