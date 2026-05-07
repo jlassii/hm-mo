@@ -1,10 +1,10 @@
 'use client'
 
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Zap } from "lucide-react"
 import { ParticleTextEffect } from "./particle-text-effect"
 import { InfiniteSlider } from "./ui/infinite-slider"
 import { ProgressiveBlur } from "./ui/progressive-blur"
-import { handleQuickStart } from "./hero-section-action"
+import { handleFreeStart, handlePaypalStart } from "./hero-section-action"
 
 export function HeroSection() {
   return (
@@ -30,23 +30,50 @@ export function HeroSection() {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-2 mt-2">
-            <form action={handleQuickStart}>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
+            {/* Free tier button */}
+            <form action={handleFreeStart}>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-3 px-7 py-2.5 rounded-full font-bold text-base transition-all duration-150 hover:scale-105 active:scale-95 border border-white/30"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  color: '#ffffff',
+                  boxShadow: '0 4px 14px 0 rgba(0,0,0,0.15)',
+                  direction: 'rtl',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <ArrowRight className="w-4 h-4 rotate-180" />
+                <span>ابدأ مجانًا – 10 رسائل</span>
+              </button>
+            </form>
+
+            {/* PayPal paid tier button */}
+            <form action={handlePaypalStart}>
               <button
                 type="submit"
                 className="inline-flex items-center gap-3 px-7 py-2.5 rounded-full font-bold text-base transition-all duration-150 hover:scale-105 active:scale-95"
                 style={{
                   backgroundColor: '#ffffff',
                   color: '#ef4444',
-                  boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.1)',
-                  direction: 'rtl'
+                  boxShadow: '0 4px 24px 0 rgba(239,68,68,0.25)',
+                  direction: 'rtl',
                 }}
               >
-                <span>إبدأ الأن مجاناً، الكتابة بالأحرف العربية فقط !</span>
-                <ArrowRight className="w-4 h-4 rotate-180" />
+                <Zap className="w-4 h-4 fill-current" />
+                <span>اشترك بـ 20$ / شهر عبر PayPal</span>
               </button>
             </form>
           </div>
+
+          {/* Hint under buttons */}
+          <p
+            dir="rtl"
+            className="text-xs text-gray-400 mt-2 text-center"
+          >
+            المستخدمون المجانيون: 10 رسائل فقط &nbsp;·&nbsp; المشتركون: رسائل غير محدودة
+          </p>
 
           <div className="mt-16 mb-8">
             <div className="group relative m-auto max-w-6xl">
