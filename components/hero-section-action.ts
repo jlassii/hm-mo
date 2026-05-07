@@ -2,11 +2,14 @@
 
 import { redirect } from 'next/navigation'
 
-export async function handleQuickStart() {
-  const API_URL = "https://loi.morched.tn/api/v1";
+const API_URL = "https://loi.morched.tn/api/v1";
+const WORKSPACE = "loi";
+
+// ─── FREE USER (10-message limit, auto-deleted after use) ─────────────────────
+export async function handleFreeStart() {
   const API_KEY = process.env.BOTAPI;
-  const WORKSPACE = "loi";
-  const username = `web_guest_${Math.floor(Math.random() * 10000)}`;
+  // "free_" prefix = free-tier user; deletion scripts can target this prefix
+  const username = `free_guest_${Math.floor(Math.random() * 1_000_000)}`;
 
   try {
     const userRes = await fetch(`${API_URL}/admin/users/new`, {
@@ -15,7 +18,11 @@ export async function handleQuickStart() {
         'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ username, password: "TempPassword123!", role: "default" })
+      body: JSON.stringify({
+        username,
+        password: "TempPassword123!",
+        role: "default"
+      })
     });
 
     const userData = await userRes.json();
@@ -41,7 +48,29 @@ export async function handleQuickStart() {
 
   } catch (error: any) {
     if (error.message === "NEXT_REDIRECT") throw error;
-    console.error("SSO flow failed:", error);
+    console.error("Free SSO flow failed:", error);
+    redirect('https://loi.morched.tn/');
+  }
+}
+
+// ─── PAID USER (redirect to PayPal; account created after successful payment) ─
+export async function handlePaypalStart() {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+
+  try {
+    const res = await fetch(`${baseUrl}/api/paypal/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+
+    const data = await res.json();
+    if (!data.approveUrl) throw new Error("No approveUrl from PayPal");
+
+    redirect(data.approveUrl);
+  } catch (error: any) {
+    if (error.message === "NEXT_REDIRECT") throw error;
+    console.error("PayPal redirect failed:", error);
     redirect('https://loi.morched.tn/');
   }
 }
