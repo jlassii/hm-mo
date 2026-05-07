@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 const PAYPAL_BASE =
   process.env.PAYPAL_ENV === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
-const API_URL = "https://loi.morched.tn/api/v1";
+// Bot (AnythingLLM) — where user accounts live
+const BOT_API_URL = "https://loi.morched.tn/api/v1";
+const BOT_URL = "https://loi.morched.tn";
 const WORKSPACE = "loi";
 
-async function getAccessToken(): Promise<string> {
-  const creds = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+// Shop (Next.js) — for redirect fallbacks
+const SHOP_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://kanoun.morched.tn";
+
+async function getPaypalAccessToken(): Promise<string> {
+  const creds = Buffer.from(
+    `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+  ).toString("base64");
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
     method: "POST",
     headers: {
@@ -31,12 +35,12 @@ export async function GET(req: NextRequest) {
   const payerId = searchParams.get("PayerID");
 
   if (!token || !payerId) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?paypal=error`);
+    return NextResponse.redirect(`${SHOP_URL}/?paypal=error`);
   }
 
   try {
-    // 1. Capture the PayPal payment
-    const accessToken = await getAccessToken();
+    // 1. Capture payment
+    const accessToken = await getPaypalAccessToken();
     const captureRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${token}/capture`, {
       method: "POST",
       headers: {
@@ -46,23 +50,19 @@ export async function GET(req: NextRequest) {
     });
 
     const captureData = await captureRes.json();
-
     if (captureData.status !== "COMPLETED") {
       console.error("PayPal capture failed:", captureData);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?paypal=failed`);
+      return NextResponse.redirect(`${SHOP_URL}/?paypal=failed`);
     }
 
-    // Extract payer email to build a deterministic username
-    const payerEmail: string =
-      captureData.payer?.email_address ?? `paypal_${token}`;
-    const sanitizedEmail = payerEmail.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-    // Username: paid_ prefix so the app can tell paid vs free users
-    const username = `paid_${sanitizedEmail}_${Date.now()}`;
+    // 2. Create paid user on the bot
+    const payerEmail: string = captureData.payer?.email_address ?? `paypal_${token}`;
+    const sanitized = payerEmail.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+    const username = `paid_${sanitized}_${Date.now()}`;
 
     const API_KEY = process.env.BOTAPI;
 
-    // 2. Create user with "paid" role
-    const userRes = await fetch(`${API_URL}/admin/users/new`, {
+    const userRes = await fetch(`${BOT_API_URL}/admin/users/new`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
@@ -72,22 +72,18 @@ export async function GET(req: NextRequest) {
         username,
         password: `Pp${Math.random().toString(36).slice(2, 10)}!`,
         role: "default",
-        // Custom metadata field to mark as paid — stored in user object
-        // The AnythingLLM API lets you pass metadata; we use the username prefix
-        // as the primary signal, but also try to set a custom field if supported.
       }),
     });
 
     const userData = await userRes.json();
     const userId = userData.user?.id;
-
     if (!userId) {
       console.error("User creation failed:", userData);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?paypal=usererror`);
+      return NextResponse.redirect(`${SHOP_URL}/?paypal=usererror`);
     }
 
-    // 3. Add user to workspace
-    await fetch(`${API_URL}/admin/workspaces/${WORKSPACE}/manage-users`, {
+    // 3. Add to workspace
+    await fetch(`${BOT_API_URL}/admin/workspaces/${WORKSPACE}/manage-users`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
@@ -96,19 +92,19 @@ export async function GET(req: NextRequest) {
       body: JSON.stringify({ userIds: [userId], reset: false }),
     });
 
-    // 4. Issue SSO token and redirect
-    const tokenRes = await fetch(`${API_URL}/users/${userId}/issue-auth-token`, {
+    // 4. Issue SSO token → redirect to bot
+    const tokenRes = await fetch(`${BOT_API_URL}/users/${userId}/issue-auth-token`, {
       method: "GET",
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
 
     const { token: ssoToken } = await tokenRes.json();
-
     return NextResponse.redirect(
-      `https://loi.morched.tn/sso/simple?token=${ssoToken}&redirectTo=/workspace/${WORKSPACE}`
+      `${BOT_URL}/sso/simple?token=${ssoToken}&redirectTo=/workspace/${WORKSPACE}`
     );
+
   } catch (err) {
     console.error("PayPal capture error:", err);
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?paypal=error`);
+    return NextResponse.redirect(`${SHOP_URL}/?paypal=error`);
   }
 }
