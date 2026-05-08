@@ -11,7 +11,7 @@ const BOT_URL = "https://loi.morched.tn";
 const WORKSPACE = "loi";
 
 // Shop (Next.js) — for redirect fallbacks
-const SHOP_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://kanoun.morched.tn";
+const SHOP_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://pwg4scgs4ws8wkc8oog8w4ck.morched.tn";
 
 async function getPaypalAccessToken(): Promise<string> {
   const creds = Buffer.from(
