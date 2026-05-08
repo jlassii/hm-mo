@@ -77,7 +77,7 @@ export async function handleFreeStart() {
 // ─── PAID USER — creates PayPal order inline (no self-fetch) ─────────────────
 export async function handlePaypalStart() {
   // NEXT_PUBLIC_BASE_URL = https://kanoun.morched.tn (the shop, for PayPal return URLs)
-  const shopUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://kanoun.morched.tn';
+  const shopUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://pwg4scgs4ws8wkc8oog8w4ck.morched.tn';
 
   try {
     const accessToken = await getPaypalAccessToken();
