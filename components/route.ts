@@ -5,13 +5,10 @@ const PAYPAL_BASE =
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
-// Bot (AnythingLLM) — where user accounts live
 const BOT_API_URL = "https://loi.morched.tn/api/v1";
 const BOT_URL = "https://loi.morched.tn";
 const WORKSPACE = "loi";
-
-// Shop (Next.js) — for redirect fallbacks
-const SHOP_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://pwg4scgs4ws8wkc8oog8w4ck.morched.tn";
+const SHOP_URL = process.env.NEXT_PUBLIC_BASE_URL!;
 
 async function getPaypalAccessToken(): Promise<string> {
   const creds = Buffer.from(
@@ -31,7 +28,7 @@ async function getPaypalAccessToken(): Promise<string> {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const token = searchParams.get("token"); // PayPal order ID
+  const token = searchParams.get("token");
   const payerId = searchParams.get("PayerID");
 
   if (!token || !payerId) {
