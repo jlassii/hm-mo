@@ -52,11 +52,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${SHOP_URL}/?paypal=failed`);
     }
 
-    // 2. Create paid user on the bot
-    const payerEmail: string = captureData.payer?.email_address ?? `paypal_${token}`;
-    const sanitized = payerEmail.replace(/[^a-z0-9]/gi, "_").toLowerCase().slice(0, 16);
-    const shortTs = Date.now().toString().slice(-6);
-    const username = `p_${sanitized}_${shortTs}`;
+    // 2. Build username — strictly max 15 chars: "p" + 8 random alphanumeric
+    const rand = Math.random().toString(36).slice(2, 10); // 8 chars
+    const username = `p${rand}`; // 9 chars total, always unique, always under 15
 
     const API_KEY = process.env.BOTAPI;
 
