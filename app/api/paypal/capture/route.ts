@@ -54,8 +54,9 @@ export async function GET(req: NextRequest) {
 
     // 2. Create paid user on the bot
     const payerEmail: string = captureData.payer?.email_address ?? `paypal_${token}`;
-    const sanitized = payerEmail.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-    const username = `paid_${sanitized}_${Date.now()}`;
+    const sanitized = payerEmail.replace(/[^a-z0-9]/gi, "_").toLowerCase().slice(0, 16);
+    const shortTs = Date.now().toString().slice(-6);
+    const username = `p_${sanitized}_${shortTs}`;
 
     const API_KEY = process.env.BOTAPI;
 
