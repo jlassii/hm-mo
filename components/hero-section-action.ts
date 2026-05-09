@@ -1,21 +1,23 @@
 'use server'
-
 import { redirect } from 'next/navigation'
 
 const BOT_API_URL = "https://loi.morched.tn/api/v1";
 const BOT_URL = "https://loi.morched.tn";
 const WORKSPACE = "loi";
-
 const PAYPAL_BASE =
   process.env.PAYPAL_ENV === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
+function shortId() {
+  // 8 random alphanumeric chars — total username will be "f_xxxxxxxx" or "p_xxxxxxxx" = 10 chars
+  return Math.random().toString(36).slice(2, 10);
+}
+
 async function getPaypalAccessToken(): Promise<string> {
   const creds = Buffer.from(
     `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
   ).toString("base64");
-
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
     method: "POST",
     headers: {
@@ -25,7 +27,6 @@ async function getPaypalAccessToken(): Promise<string> {
     body: "grant_type=client_credentials",
     cache: "no-store",
   });
-
   const data = await res.json();
   if (!data.access_token) throw new Error(`PayPal auth failed: ${JSON.stringify(data)}`);
   return data.access_token;
@@ -34,7 +35,7 @@ async function getPaypalAccessToken(): Promise<string> {
 // ─── FREE USER (10-message limit) ────────────────────────────────────────────
 export async function handleFreeStart() {
   const API_KEY = process.env.BOTAPI;
-  const username = `free_guest_${Math.floor(Math.random() * 1_000_000)}`;
+  const username = `f_${shortId()}`; // e.g. "f_k3m9za1p" = 10 chars
 
   try {
     const userRes = await fetch(`${BOT_API_URL}/admin/users/new`, {
@@ -45,10 +46,9 @@ export async function handleFreeStart() {
       },
       body: JSON.stringify({ username, password: "TempPassword123!", role: "default" })
     });
-
     const userData = await userRes.json();
     const userId = userData.user?.id;
-    if (!userId) throw new Error("User ID not returned");
+    if (!userId) throw new Error(`User creation failed: ${JSON.stringify(userData)}`);
 
     await fetch(`${BOT_API_URL}/admin/workspaces/${WORKSPACE}/manage-users`, {
       method: 'POST',
@@ -74,13 +74,12 @@ export async function handleFreeStart() {
   }
 }
 
-// ─── PAID USER — creates PayPal order inline (no self-fetch) ─────────────────
+// ─── PAID USER ───────────────────────────────────────────────────────────────
 export async function handlePaypalStart() {
   const shopUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 
   try {
     const accessToken = await getPaypalAccessToken();
-
     const res = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
       method: "POST",
       headers: {
@@ -108,9 +107,7 @@ export async function handlePaypalStart() {
 
     const order = await res.json();
     const approveLink = order.links?.find((l: any) => l.rel === "approve")?.href;
-
     if (!approveLink) throw new Error(`No approve link. PayPal response: ${JSON.stringify(order)}`);
-
     redirect(approveLink);
 
   } catch (error: any) {
